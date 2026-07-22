@@ -1,0 +1,14 @@
+package com.event.driven.stock.service.enums;
+
+public enum EventType {
+    
+    STOCK_RESERVATION_UPDATED,
+    STOCK_RESERVATION_CONFIRMED,
+    STOCK_RESERVATION_RELEASED,
+    STOCK_RESERVATION_FAILED,
+    STOCK_UPDATED,
+    LOW_STOCK,
+    PRODUCT_CREATED,
+    PRODUCT_UPDATED,
+    PRODUCT_DELETED,
+}
