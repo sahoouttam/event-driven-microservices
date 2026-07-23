@@ -1,6 +1,6 @@
 package com.event.driven.payment.service.enums;
 
-public enum PaymentAction {
+public enum TransactionStatus {
     INITIATED,
     PROCESSING,
     COMPLETED,

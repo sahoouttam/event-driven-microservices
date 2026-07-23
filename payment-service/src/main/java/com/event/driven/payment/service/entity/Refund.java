@@ -1,6 +1,7 @@
 package com.event.driven.payment.service.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.event.driven.common.service.entity.BaseEntity;
 import com.event.driven.payment.service.enums.RefundStatus;
@@ -44,4 +45,6 @@ public class Refund extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private RefundStatus refundStatus;
+
+    private LocalDateTime processedAt;
 }

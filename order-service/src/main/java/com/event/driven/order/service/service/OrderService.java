@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.event.driven.common.service.enums.AggregateType;
 import com.event.driven.common.service.events.OrderCancelledEvent;
@@ -103,6 +104,7 @@ public class OrderService {
         orderRepository.deleteById(orderId);
     }
     
+    @Transactional
     public void updateStatus(Long orderId, OrderStatus orderStatus) {
         Order order = findOrder(orderId);
         order.setOrderStatus(orderStatus);
@@ -140,7 +142,9 @@ public class OrderService {
                     AggregateType.ORDER, 
                     order.getId().toString(), 
                     orderConfirmedEvent);
-        } else if (orderStatus == OrderStatus.CANCELLED) {
+        } else if (orderStatus == OrderStatus.FAILED || 
+                    orderStatus == OrderStatus.CANCELLED || 
+                    orderStatus == OrderStatus.PAYMENT_REFUNDED) {
             //cancel inventory
             OrderCancelledEvent orderCancelledEvent = OrderCancelledEvent.builder()
                     .orderId(orderId)

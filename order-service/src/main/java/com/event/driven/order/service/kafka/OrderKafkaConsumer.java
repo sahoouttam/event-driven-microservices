@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import com.event.driven.common.service.events.EventEnvelope;
 import com.event.driven.common.service.events.PaymentCompletedEvent;
 import com.event.driven.common.service.events.PaymentFailedEvent;
+import com.event.driven.common.service.events.PaymentRefundedEvent;
 import com.event.driven.common.service.events.StockReservationEvent;
 import com.event.driven.common.service.events.StockReservationFailedEvent;
 import com.event.driven.common.service.exceptions.EventSerializationException;
@@ -84,7 +85,14 @@ public class OrderKafkaConsumer {
                         .readValue(eventEnvelope.getPayload(), 
                                     PaymentFailedEvent.class);
                     orderService.updateStatus(paymentFailedEvent.getOrderId(), 
-                                        OrderStatus.FAILED);
+                                        OrderStatus.CANCELLED);
+                } 
+                case "PAYMENT_REFUNDED" -> {
+                    PaymentRefundedEvent paymentRefundedEvent = objectMapper
+                        .readValue(eventEnvelope.getPayload(), 
+                                    PaymentRefundedEvent.class);
+                    orderService.updateStatus(paymentRefundedEvent.getOrderId(), 
+                                        OrderStatus.PAYMENT_REFUNDED);
                 }      
             }
 

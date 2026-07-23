@@ -3,6 +3,8 @@ CREATE TABLE payment_transactions (
     payment_id BIGINT NOT NULL,
     action VARCHAR(30) NOT NULL,
     created_at TIMESTAMP NOT NULL,
+    transaction_reference VARCHAR(100),
+    psp_reference VARCHAR(100),
     updated_at TIMESTAMP,
     
     CONSTRAINT fk_transaction_payment 

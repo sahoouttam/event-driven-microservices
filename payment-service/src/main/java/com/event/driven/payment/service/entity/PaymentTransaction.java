@@ -1,7 +1,7 @@
 package com.event.driven.payment.service.entity;
 
 import com.event.driven.common.service.entity.BaseEntity;
-import com.event.driven.payment.service.enums.PaymentAction;
+import com.event.driven.payment.service.enums.TransactionStatus;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,5 +37,9 @@ public class PaymentTransaction extends BaseEntity {
     private Payment payment;
 
     @Enumerated(EnumType.STRING)
-    private PaymentAction paymentAction;
+    private TransactionStatus paymentAction;
+
+    private String transactionReference; 
+
+    private String pspReference;
 }
