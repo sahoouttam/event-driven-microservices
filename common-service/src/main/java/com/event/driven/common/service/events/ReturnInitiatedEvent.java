@@ -9,13 +9,11 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItemEvent {
+public class ReturnInitiatedEvent {
     
-    private Long productId;
+    private Long returnId;
 
-    private String sku;
+    private Long orderId;
 
-    private String productName;
-
-    private Integer quantity;
+    private Long fulfillmentId;
 }

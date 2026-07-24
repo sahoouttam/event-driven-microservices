@@ -1,4 +1,4 @@
-package com.event.driven.common.service.events;
+package com.event.driven.fulfillment.service.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,11 +9,11 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItemEvent {
+public class FulfillmentItemResponse {
     
-    private Long productId;
+    private Long id;
 
-    private String sku;
+    private Long productId;
 
     private String productName;
 

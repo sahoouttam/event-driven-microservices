@@ -9,7 +9,7 @@
         <artifactId>event-driven-microservices</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-    <artifactId>fulfillment-service</artifactId>
+    <artifactId>account-service</artifactId>
 
     <dependencies>
         <dependency>
@@ -53,7 +53,7 @@
     </dependencies>
 
     <build>
-        <finalName>fulfillment-service</finalName>
+        <finalName>account-service</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -61,4 +61,5 @@
             </plugin>
         </plugins>
     </build>
+    
 </project>

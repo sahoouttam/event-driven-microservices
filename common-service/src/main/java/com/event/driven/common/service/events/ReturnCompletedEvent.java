@@ -1,5 +1,7 @@
 package com.event.driven.common.service.events;
 
+import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,13 +11,13 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItemEvent {
+public class ReturnCompletedEvent {
     
-    private Long productId;
+    private Long returnId;
 
-    private String sku;
+    private Long orderId;
 
-    private String productName;
+    private Long fulfillmentId;
 
-    private Integer quantity;
+    private LocalDateTime completedAt;
 }

@@ -1,5 +1,5 @@
 package com.event.driven.common.service.enums;
 
 public enum AggregateType {
-    PRODUCT, INVENTORY, ORDER, PAYMENT
+    PRODUCT, INVENTORY, ORDER, PAYMENT, FULFILLMENT, RETURN
 }

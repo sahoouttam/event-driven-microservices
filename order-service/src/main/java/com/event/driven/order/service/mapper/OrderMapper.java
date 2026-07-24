@@ -35,6 +35,7 @@ public class OrderMapper {
         return OrderItemEvent.builder()
                     .productId(orderItem.getProductId())
                     .sku(orderItem.getSku())
+                    .productName(orderItem.getProductName())
                     .quantity(orderItem.getQuantity())
                     .build();
     }
