@@ -1,6 +1,7 @@
 package com.event.driven.fulfillment.service.service;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -10,6 +11,9 @@ import com.event.driven.common.service.events.FulfillmentDeliveredEvent;
 import com.event.driven.common.service.events.FulfillmentShippedEvent;
 import com.event.driven.common.service.events.OrderConfirmedEvent;
 import com.event.driven.common.service.events.OrderItemEvent;
+import com.event.driven.fulfillment.service.client.AccountClient;
+import com.event.driven.fulfillment.service.dto.response.AddressResponse;
+import com.event.driven.fulfillment.service.dto.response.CustomerResponse;
 import com.event.driven.fulfillment.service.dto.response.FulfillmentResponse;
 import com.event.driven.fulfillment.service.entity.Fulfillment;
 import com.event.driven.fulfillment.service.enums.EventType;
@@ -28,22 +32,39 @@ public class FulfillmentService {
     private final FulfillmentItemService fulfillmentItemService;
     private final OutboxEventService outboxEventService;
     private final FulfillmentMapper fulfillmentMapper;
+    private final AccountClient accountClient;
     
     @Autowired
     public FulfillmentService(FulfillmentRepository fulfillmentRepository,
                                 FulfillmentItemService fulfillmentItemService,
                                 OutboxEventService outboxEventService,
-                                FulfillmentMapper fulfillmentMapper) {
+                                FulfillmentMapper fulfillmentMapper,
+                                AccountClient accountClient) {
         this.fulfillmentRepository = fulfillmentRepository;
         this.fulfillmentItemService = fulfillmentItemService;
         this.outboxEventService = outboxEventService;
         this.fulfillmentMapper = fulfillmentMapper;
+        this.accountClient = accountClient;
     }
 
     public void createFulfillment(OrderConfirmedEvent orderConfirmedEvent) {
+        CompletableFuture<CustomerResponse> customerFuture = 
+                accountClient.getCustomer(orderConfirmedEvent.getCustomerId());
+        CompletableFuture<AddressResponse> addressFuture = 
+                accountClient.getAddress(orderConfirmedEvent.getCustomerId(), 
+                                        orderConfirmedEvent.getShippingAddressId());
+        CompletableFuture.allOf(customerFuture, addressFuture).join();
+        CustomerResponse customerResponse = customerFuture.join();
+        AddressResponse addressResponse = addressFuture.join();
         Fulfillment fulfillment = Fulfillment.builder()
                     .orderId(orderConfirmedEvent.getOrderId())
                     .customerId(orderConfirmedEvent.getCustomerId())
+                    .customerName(customerResponse.getName())
+                    .customerPhone(customerResponse.getPhone())
+                    .addressId(addressResponse.getAddressId())
+                    .shippingStreet(addressResponse.getStreet())
+                    .shippingCity(addressResponse.getCity())
+                    .shippingState(addressResponse.getState())
                     .fulfillmentStatus(FulfillmentStatus.PENDING)
                     .build();
         Fulfillment savedFulfillment = fulfillmentRepository.save(fulfillment);

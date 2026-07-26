@@ -1,6 +1,7 @@
 package com.event.driven.common.service.events;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,4 +21,6 @@ public class ReturnCompletedEvent {
     private Long fulfillmentId;
 
     private LocalDateTime completedAt;
+
+    List<ReturnItemEvent> returnItemEvents;
 }

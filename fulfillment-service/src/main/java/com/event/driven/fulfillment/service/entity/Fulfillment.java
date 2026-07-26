@@ -36,9 +36,19 @@ public class Fulfillment extends BaseEntity {
 
     private Long orderId;
 
-    private String orderNumber;
-
     private Long customerId;
+
+    private String customerName;
+
+    private String customerPhone;
+
+    private Long addressId;
+
+    private String shippingStreet;
+
+    private String shippingCity;
+    
+    private String shippingState;
 
     @Enumerated(EnumType.STRING)
     private FulfillmentStatus fulfillmentStatus;

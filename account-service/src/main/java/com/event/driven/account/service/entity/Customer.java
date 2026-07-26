@@ -1,22 +1,19 @@
-package com.event.driven.order.service.entity;
+package com.event.driven.account.service.entity;
 
-import java.math.BigDecimal;
 import java.util.List;
 
+import com.event.driven.account.service.enums.CustomerStatus;
 import com.event.driven.common.service.entity.BaseEntity;
-import com.event.driven.order.service.enums.OrderStatus;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,27 +26,22 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@Table(name = "orders")
-public class Order extends BaseEntity {
+@Table(name = "customers")
+public class Customer extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String orderNumber;
+    private String name;
 
-    private Long customerId;
+    private String email;
 
-    private Long shippingAddressId;
+    private String phone;
 
     @Enumerated(EnumType.STRING)
-    private OrderStatus orderStatus;
+    private CustomerStatus customerStatus;
 
-    private BigDecimal totalAmount;
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "order", fetch = FetchType.LAZY)
-    private List<OrderItem> orderItems;
-
-    @Version
-    private Long version;
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL)
+    private List<Address> addresses;
 }

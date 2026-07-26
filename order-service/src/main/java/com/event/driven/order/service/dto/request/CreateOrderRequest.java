@@ -15,5 +15,7 @@ public class CreateOrderRequest {
     
     private Long customerId;
 
+    private Long ShippingAddressId;
+
     private List<OrderItemRequest> orderItemRequests;
 }

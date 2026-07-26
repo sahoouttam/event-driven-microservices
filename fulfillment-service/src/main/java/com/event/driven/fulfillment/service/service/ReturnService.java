@@ -1,6 +1,8 @@
 package com.event.driven.fulfillment.service.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -8,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.event.driven.common.service.enums.AggregateType;
 import com.event.driven.common.service.events.ReturnCompletedEvent;
 import com.event.driven.common.service.events.ReturnInitiatedEvent;
+import com.event.driven.common.service.events.ReturnItemEvent;
 import com.event.driven.fulfillment.service.dto.request.CreateReturnRequest;
 import com.event.driven.fulfillment.service.dto.request.ReturnItemRequest;
 import com.event.driven.fulfillment.service.dto.response.FulfillmentResponse;
@@ -128,11 +131,17 @@ public class ReturnService {
         returnEntity.setCompletedAt(LocalDateTime.now());
         Return savedReturn = saveReturn(returnEntity);
 
+        List<ReturnItemEvent>  returnItemEvents = returnItemService.findReturnItems(returnEntity)
+                                    .stream()
+                                    .map(fulfillmentMapper::toEvent)
+                                    .collect(Collectors.toList());
+
         ReturnCompletedEvent returnCompletedEvent = ReturnCompletedEvent.builder()
                         .returnId(id)
                         .orderId(savedReturn.getOrderId())
                         .fulfillmentId(savedReturn.getFulfillmentId())
                         .completedAt(savedReturn.getCompletedAt())
+                        .returnItemEvents(returnItemEvents)
                         .build();
 
         outboxEventService.saveEvent(EventType.RETURN_COMPLETED,

@@ -24,7 +24,7 @@ public class InventoryTransactionService {
                                 .quantity(quantity)
                                 .transactionType(transactionType)
                                 .build();
-        return inventoryTransactionRepository.save(inventoryTransaction);
+        return save(inventoryTransaction);
     }
     
     public InventoryTransaction save(InventoryTransaction inventoryTransaction) {

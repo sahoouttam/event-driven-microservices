@@ -10,6 +10,7 @@ import com.event.driven.common.service.events.OrderConfirmedEvent;
 import com.event.driven.common.service.events.OrderCreatedEvent;
 import com.event.driven.common.service.events.OrderItemEvent;
 import com.event.driven.common.service.events.ReturnCompletedEvent;
+import com.event.driven.common.service.events.ReturnItemEvent;
 import com.event.driven.common.service.exceptions.EventSerializationException;
 import com.event.driven.common.service.kafka.KafkaTopics;
 import com.event.driven.stock.service.dto.request.StockOperationRequest;
@@ -109,7 +110,13 @@ public class StockKafkaConsumer {
                 ReturnCompletedEvent returnCompletedEvent = objectMapper
                         .readValue(eventEnvelope.getPayload(), 
                                     ReturnCompletedEvent.class);
-                for (OrderItemEvent orderItemEvent : returnCompletedEvent.ge)
+                for (ReturnItemEvent returnItemEvent : returnCompletedEvent.getReturnItemEvents()) {
+                    StockOperationRequest stockOperationRequest = new StockOperationRequest(
+                        returnItemEvent.getSku(),
+                        returnItemEvent.getQuantity()
+                    );
+                    inventoryService.restoreStock(stockOperationRequest);
+                }
             }
         } catch (JsonProcessingException ex) {
             throw new EventSerializationException("Unable to serialize event", ex);

@@ -1,7 +1,11 @@
 package com.event.driven.fulfillment.service.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.event.driven.common.service.events.ReturnItemEvent;
 import com.event.driven.fulfillment.service.dto.request.ReturnItemRequest;
 import com.event.driven.fulfillment.service.entity.Return;
 import com.event.driven.fulfillment.service.entity.ReturnItem;
@@ -14,6 +18,7 @@ public class ReturnItemService {
 
     private final ReturnItemRepository returnItemRepository;
 
+    @Autowired
     public ReturnItemService(ReturnItemRepository returnItemRepository) {
         this.returnItemRepository = returnItemRepository;
     }
@@ -32,5 +37,7 @@ public class ReturnItemService {
                 returnItemRequest.getProductName());
     }
 
-    
+    public List<ReturnItem> findReturnItems(Return returnEntity) {
+        return returnItemRepository.findByReturn(returnEntity);
+    } 
 }

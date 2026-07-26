@@ -8,6 +8,8 @@ import com.event.driven.common.service.events.EventEnvelope;
 import com.event.driven.common.service.events.PaymentCompletedEvent;
 import com.event.driven.common.service.events.PaymentFailedEvent;
 import com.event.driven.common.service.events.PaymentRefundedEvent;
+import com.event.driven.common.service.events.ReturnCompletedEvent;
+import com.event.driven.common.service.events.ReturnItemEvent;
 import com.event.driven.common.service.events.StockReservationEvent;
 import com.event.driven.common.service.events.StockReservationFailedEvent;
 import com.event.driven.common.service.exceptions.EventSerializationException;
@@ -96,6 +98,29 @@ public class OrderKafkaConsumer {
                 }      
             }
 
+        } catch (JsonProcessingException ex) {
+            throw new EventSerializationException("Unable to serialize event", ex);
+        }
+    }
+
+    @KafkaListener(
+        topics = KafkaTopics.FULFILLMENT_EVENTS,
+        groupId = "${spring.kafka.consumer.group-id}"
+    )
+    public void consumeFulfillmentEvents(String envelopeJson) {
+        try {
+            EventEnvelope eventEnvelope = objectMapper.readValue(
+                                                envelopeJson, EventEnvelope.class);
+            log.info("Received event type: {}, eventId: {}", 
+                    eventEnvelope.getEventType(), eventEnvelope.getEventId());
+            if ("RETURN_COMPLETED".equals(eventEnvelope.getEventType())) {
+                ReturnCompletedEvent returnCompletedEvent = objectMapper
+                        .readValue(eventEnvelope.getPayload(), 
+                                    ReturnCompletedEvent.class);
+                orderService.updateStatus(
+                                    returnCompletedEvent.getOrderId(), 
+                                    OrderStatus.RETURNED);
+            }
         } catch (JsonProcessingException ex) {
             throw new EventSerializationException("Unable to serialize event", ex);
         }

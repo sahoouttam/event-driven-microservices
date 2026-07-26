@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import com.event.driven.common.service.events.ReturnItemEvent;
 import com.event.driven.fulfillment.service.dto.response.FulfillmentItemResponse;
 import com.event.driven.fulfillment.service.dto.response.FulfillmentResponse;
 import com.event.driven.fulfillment.service.dto.response.ReturnItemResponse;
@@ -62,6 +63,15 @@ public class FulfillmentMapper {
     public ReturnItemResponse toResponse(ReturnItem returnItem) {
         return ReturnItemResponse.builder()
                         .id(returnItem.getId())
+                        .productId(returnItem.getProductId())
+                        .productName(returnItem.getProductName())
+                        .quantity(returnItem.getQuantity())
+                        .build();
+    }
+
+    public ReturnItemEvent toEvent(ReturnItem returnItem) {
+        return ReturnItemEvent.builder()
+                        .returnItemId(returnItem.getId())
                         .productId(returnItem.getProductId())
                         .productName(returnItem.getProductName())
                         .quantity(returnItem.getQuantity())

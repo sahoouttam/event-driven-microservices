@@ -53,6 +53,7 @@ public class OrderService {
         Order order = Order.builder()
                 .orderNumber(generateOrderNumber())
                 .customerId(createOrderRequest.getCustomerId())
+                .shippingAddressId(createOrderRequest.getShippingAddressId())
                 .orderStatus(OrderStatus.PENDING_INVENTORY)
                 .totalAmount(BigDecimal.ZERO)
                 .build();
@@ -134,6 +135,7 @@ public class OrderService {
             OrderConfirmedEvent orderConfirmedEvent = OrderConfirmedEvent.builder()
                     .orderId(orderId)
                     .customerId(order.getCustomerId())
+                    .shippingAddressId(order.getShippingAddressId())
                     .totalAmount(order.getTotalAmount())
                     .orderItemEvents(orderItemEvents)
                     .build();
@@ -156,6 +158,8 @@ public class OrderService {
                     AggregateType.ORDER, 
                     order.getId().toString(), 
                     orderCancelledEvent);
+        } else if (orderStatus == OrderStatus.RETURNED) {
+            log.info("Order {} marked as RETURNED", orderId);
         }
     }
 

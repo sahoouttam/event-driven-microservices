@@ -89,6 +89,26 @@ public class InventoryService {
     }
 
     @Transactional
+    public void restoreStock(StockOperationRequest stockRequest) {
+        Product product = productService.findBySku(stockRequest.getSku());
+        Inventory inventory = findByProduct(product);
+
+        inventory.setTotalQuantity(
+                inventory.getTotalQuantity() + stockRequest.getQuantity());
+        inventory.setAvailableQuantity(
+                inventory.getAvailableQuantity() + stockRequest.getQuantity());
+        Inventory savedInventory = saveInventory(inventory);
+
+        InventoryTransaction savedTransaction = inventoryTransactionService
+                        .saveTransaction(savedInventory, 
+                                        stockRequest.getQuantity(), 
+                                        TransactionType.STOCK_RETURNED);
+
+        log.info("Stock restored: sku={}, available quantity={}",
+                stockRequest.getSku(), savedInventory.getAvailableQuantity());
+    }
+
+    @Transactional
     public InventoryResponse updateReservation(StockOperationRequest stockRequest) {
         log.info("Updating reservation, sku={}, quantity={}", 
                     stockRequest.getSku(), stockRequest.getQuantity());     

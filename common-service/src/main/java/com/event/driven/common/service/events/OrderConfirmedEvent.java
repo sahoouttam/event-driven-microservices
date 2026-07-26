@@ -18,6 +18,8 @@ public class OrderConfirmedEvent {
 
     private Long customerId;
 
+    private Long shippingAddressId;
+
     private BigDecimal totalAmount;
 
     private List<OrderItemEvent> orderItemEvents;
