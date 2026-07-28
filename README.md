@@ -47,8 +47,6 @@
 - **Kafka Streams**: Real-time order validation and enrichment
 - **Database per Service**: Each service owns its data (PostgreSQL)
 - **Async Processing**: Non-blocking parallel calls with CompletableFuture
-- **All-or-Nothing Stock Validation**: Ensures order integrity
-- **Event Sourcing**: Complete audit trail of all state changes
 
 ## 🛠️ Tech Stack
 
@@ -62,7 +60,6 @@
 | **Migrations** | Flyway |
 | **Build** | Maven (Multi-module) |
 | **Testing** | JUnit 5, Mockito |
-| **API Docs** | SpringDoc OpenAPI (Swagger) |
 
 ## 📦 Services
 
@@ -93,3 +90,29 @@ PENDING → PICKING → PACKED → SHIPPED → DELIVERED
 
 5. Return
 INITIATED → APPROVED → RECEIVED → COMPLETED → Restock
+
+## 📊 Event Flow
+
+| Step | Publisher | Event | Consumer | Action |
+|------|-----------|-------|----------|--------|
+| 1 | Order Service | `ORDER_CREATED` | Stock Service | Reserve inventory (all-or-nothing) |
+| 2 | Stock Service | `STOCK_RESERVATION_UPDATED` | Order Service | Update to PENDING_PAYMENT |
+| 3 | Stock Service | `STOCK_RESERVATION_FAILED` | Order Service | Update to FAILED |
+| 4 | Order Service | `ORDER_PAYMENT_INITIATED` | Payment Service | Process payment |
+| 5 | Payment Service | `PAYMENT_COMPLETED` | Order Service | Update to CONFIRMED |
+| 6 | Payment Service | `PAYMENT_FAILED` | Order Service | Update to CANCELLED |
+| 7 | Order Service | `ORDER_CONFIRMED` | Stock, Fulfillment | Deduct stock, create shipment |
+| 8 | Order Service | `ORDER_CANCELLED` | Stock, Fulfillment | Release stock, cancel fulfillment |
+| 9 | Fulfillment Service | `FULFILLMENT_SHIPPED` | Order Service | Update to SHIPPED |
+| 10 | Fulfillment Service | `FULFILLMENT_DELIVERED` | Order Service | Update to DELIVERED |
+| 11 | Fulfillment Service | `RETURN_COMPLETED` | Order, Stock | Update status, restock |
+
+## 🗄️ Kafka Topics
+
+| Topic | Events | Publisher | Consumer |
+|-------|--------|-----------|----------|
+| `order-events` | ORDER_CREATED, ORDER_CONFIRMED, ORDER_CANCELLED | Order Service | Stock, Fulfillment |
+| `inventory-events` | STOCK_RESERVATION_UPDATED, STOCK_RESERVATION_FAILED, STOCK_UPDATED | Stock Service | Order Service |
+| `payment-events` | ORDER_PAYMENT_INITIATED, PAYMENT_COMPLETED, PAYMENT_FAILED, PAYMENT_REFUNDED | Order, Payment | Payment, Order |
+| `fulfillment-events` | FULFILLMENT_SHIPPED, FULFILLMENT_DELIVERED, RETURN_COMPLETED | Fulfillment | Order, Stock |
+
