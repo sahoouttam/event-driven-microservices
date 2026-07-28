@@ -37,6 +37,7 @@ public class AddressService {
                     .state(createAddressRequest.getState())
                     .country(createAddressRequest.getCountry())
                     .zipCode(createAddressRequest.getZipCode())
+                    .isDefault(false)
                     .addressType(createAddressRequest.getAddressType())
                     .customer(customer)
                     .build();
@@ -102,11 +103,13 @@ public class AddressService {
 
     private AddressResponse toResponse(Address address) {
         return AddressResponse.builder()
-                    .addressId(address.getId())
-                    .city(address.getCity())
+                    .id(address.getId())
                     .street(address.getStreet())
+                    .city(address.getCity())
+                    .state(address.getState())
                     .country(address.getCountry())
                     .zipCode(address.getZipCode())
+                    .isDefault(address.isDefault())
                     .createdAt(address.getCreatedAt())
                     .build();
     }

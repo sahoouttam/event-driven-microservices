@@ -13,13 +13,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateAddressRequest {
     
-    private String city;
     private String street;
+    private String city;
     private String state;
     private String country;
     private String zipCode;
-    private boolean isDeault;
-
     private AddressType addressType;
 
 }

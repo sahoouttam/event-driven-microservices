@@ -71,7 +71,7 @@ public class CustomerService {
 
     public void deactivateCustomer(Long id) {
         Customer customer = findById(id);
-        customer.setCustomerStatus(CustomerStatus.SUSPENDED);
+        customer.setCustomerStatus(CustomerStatus.INACTIVE);
         customerRepository.save(customer);
         log.info("customer deactivated with id {}", id);
     }
