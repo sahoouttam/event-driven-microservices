@@ -42,6 +42,8 @@ public class Order extends BaseEntity {
 
     private Long shippingAddressId;
 
+    private String paymentMethod;
+
     @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
 

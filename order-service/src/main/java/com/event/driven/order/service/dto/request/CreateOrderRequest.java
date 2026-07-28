@@ -17,5 +17,7 @@ public class CreateOrderRequest {
 
     private Long ShippingAddressId;
 
+    private String paymentMethod;
+
     private List<OrderItemRequest> orderItemRequests;
 }

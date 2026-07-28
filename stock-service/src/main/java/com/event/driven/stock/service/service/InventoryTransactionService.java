@@ -1,5 +1,7 @@
 package com.event.driven.stock.service.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,16 +20,20 @@ public class InventoryTransactionService {
         this.inventoryTransactionRepository = inventoryTransactionRepository;
     }
 
-    public InventoryTransaction saveTransaction(Inventory inventory, Integer quantity, TransactionType transactionType) {
+    public void saveTransaction(Inventory inventory, Integer quantity, TransactionType transactionType) {
         InventoryTransaction inventoryTransaction = InventoryTransaction.builder()
                                 .inventory(inventory)
                                 .quantity(quantity)
                                 .transactionType(transactionType)
                                 .build();
-        return save(inventoryTransaction);
+        inventoryTransactionRepository.save(inventoryTransaction);
     }
     
     public InventoryTransaction save(InventoryTransaction inventoryTransaction) {
         return inventoryTransactionRepository.save(inventoryTransaction);
+    }
+
+    public List<InventoryTransaction> findAllInventoryTransactions(Inventory inventory) {
+        return inventoryTransactionRepository.findByInventory(inventory);
     }
 }

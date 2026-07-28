@@ -1,6 +1,7 @@
 package com.event.driven.payment.service.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import com.event.driven.common.service.entity.BaseEntity;
 import com.event.driven.payment.service.enums.PaymentMethod;
@@ -47,4 +48,6 @@ public class Payment extends BaseEntity {
     private PaymentStatus paymentStatus;
 
     private String transactionId;
+
+    private LocalDateTime processedAt;
 }

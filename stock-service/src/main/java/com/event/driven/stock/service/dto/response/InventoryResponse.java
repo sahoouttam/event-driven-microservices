@@ -15,8 +15,6 @@ public class InventoryResponse {
 
     private String productName;
 
-    private Long inventoryTransactionId;
-
     private Integer totalQuantity;
 
     private Integer availableQuantity;

@@ -1,5 +1,6 @@
 package com.event.driven.payment.service.service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import com.event.driven.payment.service.dto.response.PaymentResponse;
 import com.event.driven.payment.service.dto.response.RefundResponse;
 import com.event.driven.payment.service.entity.Payment;
 import com.event.driven.payment.service.enums.EventType;
+import com.event.driven.payment.service.enums.PaymentMethod;
 import com.event.driven.payment.service.enums.TransactionStatus;
 import com.event.driven.payment.service.enums.PaymentStatus;
 import com.event.driven.payment.service.exception.PaymentNotFoundException;
@@ -52,7 +54,7 @@ public class PaymentService {
                     .orderId(orderPaymentEvent.getOrderId())
                     .customerId(orderPaymentEvent.getCustomerId())
                     .amount(orderPaymentEvent.getTotalAmount())
-                    //.paymentMethod(paymentRequest.getPaymentMethod())
+                    .paymentMethod(PaymentMethod.valueOf(orderPaymentEvent.getPaymentMethod()))
                     .paymentStatus(PaymentStatus.PENDING)
                     .build();
         Payment savedPayment = paymentRepository.save(payment);
@@ -60,9 +62,10 @@ public class PaymentService {
         paymentTransactionService.saveTransaction(savedPayment, TransactionStatus.INITIATED);
 
         Payment updatedPayment;
-        if (success()) {
+        if (paymentSuccess()) {
             savedPayment.setPaymentStatus(PaymentStatus.COMPLETED);
             savedPayment.setTransactionId(generateTransactionId());
+            savedPayment.setProcessedAt(LocalDateTime.now());
             updatedPayment = paymentRepository.save(savedPayment);
 
             paymentTransactionService.saveTransaction(updatedPayment, TransactionStatus.COMPLETED);
@@ -77,8 +80,10 @@ public class PaymentService {
                     AggregateType.PAYMENT, 
                     updatedPayment.getId().toString(), 
                     paymentCompletedEvent);
+            log.info("Payment completed for order {}", savedPayment.getOrderId());
         } else {
             savedPayment.setPaymentStatus(PaymentStatus.FAILED);
+            savedPayment.setProcessedAt(LocalDateTime.now());
             updatedPayment = paymentRepository.save(savedPayment);
 
             paymentTransactionService.saveTransaction(updatedPayment, TransactionStatus.FAILED);
@@ -92,6 +97,7 @@ public class PaymentService {
                     AggregateType.PAYMENT, 
                     updatedPayment.getId().toString(), 
                     paymentFailedEvent);
+            log.info("Payment failed for order {}", savedPayment.getOrderId());
         }
         return toResponse(updatedPayment);
     }
@@ -151,7 +157,7 @@ public class PaymentService {
                     .substring(0, 8).toUpperCase();
     }
 
-    private boolean success() {
+    private boolean paymentSuccess() {
         return Math.random() < 0.9;
     }
 }

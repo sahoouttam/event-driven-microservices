@@ -19,5 +19,7 @@ public class OrderPaymentEvent {
 
     private Long customerId;
 
+    private String paymentMethod;
+
     private BigDecimal totalAmount;
 }

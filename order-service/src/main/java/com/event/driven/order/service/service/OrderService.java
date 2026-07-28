@@ -54,6 +54,7 @@ public class OrderService {
                 .orderNumber(generateOrderNumber())
                 .customerId(createOrderRequest.getCustomerId())
                 .shippingAddressId(createOrderRequest.getShippingAddressId())
+                .paymentMethod(createOrderRequest.getPaymentMethod())
                 .orderStatus(OrderStatus.PENDING_INVENTORY)
                 .totalAmount(BigDecimal.ZERO)
                 .build();
@@ -82,22 +83,6 @@ public class OrderService {
                                     savedOrder.getId().toString(), 
                                     orderCreatedEvent);  
         return orderMapper.toResponse(updatedOrder);
-
-    }
-
-    public Order findOrder(Long orderId) {
-        return orderRepository.findById(orderId)
-                .orElseThrow(() -> 
-                    new ResourceNotFoundException("order not found"));
-    }
-
-    public List<OrderResponse> getAllOrders(Long customerId) {
-        log.info("Getting all orders for customer with id {}", customerId);
-        return orderRepository.findByCustomerId(customerId)
-                    .stream()
-                    .map(order -> orderMapper.toResponse(order))
-                    .collect(Collectors.toList());
-
     }
 
     public void deleteOrder(Long orderId) {
@@ -123,6 +108,7 @@ public class OrderService {
                     .orderId(orderId)
                     .orderNumber(order.getOrderNumber())
                     .customerId(order.getCustomerId())
+                    .paymentMethod(order.getPaymentMethod())
                     .totalAmount(order.getTotalAmount())
                     .build();
             outboxEventService.saveEvent(
@@ -161,6 +147,26 @@ public class OrderService {
         } else if (orderStatus == OrderStatus.RETURNED) {
             log.info("Order {} marked as RETURNED", orderId);
         }
+    }
+
+    public OrderResponse getOrder(Long orderId) {
+        Order order = findOrder(orderId);
+        return orderMapper.toResponse(order);
+    }
+
+    public Order findOrder(Long orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> 
+                    new ResourceNotFoundException("order not found"));
+    }
+
+    public List<OrderResponse> getAllOrders(Long customerId) {
+        log.info("Getting all orders for customer with id {}", customerId);
+        return orderRepository.findByCustomerId(customerId)
+                    .stream()
+                    .map(order -> orderMapper.toResponse(order))
+                    .collect(Collectors.toList());
+
     }
 
     private String generateOrderNumber() {
