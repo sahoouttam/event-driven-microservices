@@ -96,8 +96,6 @@ public class InventoryService {
 
         inventory.setTotalQuantity(
                     inventory.getTotalQuantity() + addStockRequest.getQuantity());
-        inventory.setAvailableQuantity(
-                    inventory.getAvailableQuantity() + addStockRequest.getQuantity());
         Inventory savedInventory = saveInventory(inventory);
 
         inventoryTransactionService.saveTransaction(savedInventory,
@@ -242,6 +240,7 @@ public class InventoryService {
 
     private InventoryResponse toResponse(Product product, Inventory inventory) {
         return InventoryResponse.builder()
+                    .id(inventory.getId())
                     .sku(product.getSku())
                     .productName(product.getName())
                     .totalQuantity(inventory.getTotalQuantity())
