@@ -9,7 +9,7 @@ import com.event.driven.common.service.events.PaymentCompletedEvent;
 import com.event.driven.common.service.events.PaymentFailedEvent;
 import com.event.driven.common.service.events.PaymentRefundedEvent;
 import com.event.driven.common.service.events.ReturnCompletedEvent;
-import com.event.driven.common.service.events.StockReservationEvent;
+import com.event.driven.common.service.events.StockReservationCreatedEvent;
 import com.event.driven.common.service.events.StockReservationFailedEvent;
 import com.event.driven.common.service.exceptions.EventSerializationException;
 import com.event.driven.common.service.kafka.KafkaTopics;
@@ -45,9 +45,9 @@ public class OrderKafkaConsumer {
                     eventEnvelope.getEventType(), eventEnvelope.getEventId());  
             switch (eventEnvelope.getEventType()) {
                 case "STOCK_RESERVATION_UPDATED" -> {
-                    StockReservationEvent reservationEvent = objectMapper
+                    StockReservationCreatedEvent reservationEvent = objectMapper
                         .readValue(eventEnvelope.getPayload(), 
-                                    StockReservationEvent.class);
+                                    StockReservationCreatedEvent.class);
                     orderService.updateStatus(reservationEvent.getOrderId(), OrderStatus.PENDING_PAYMENT);
                 }
                 case "STOCK_RESERVATION_FAILED" -> {

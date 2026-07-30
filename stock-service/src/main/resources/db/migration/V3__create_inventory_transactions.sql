@@ -14,6 +14,6 @@ CREATE TABLE inventory_transactions
 );
 
 ALTER TABLE inventory_transactions
-    ADD CONSTRAINT fk_inventory_transaction_product
-        FOREIGN KEY(product_id)
-            REFERENCES products(id);
+    ADD CONSTRAINT fk_inventory_transaction_inventory
+        FOREIGN KEY(inventory_id)
+            REFERENCES inventories(id);

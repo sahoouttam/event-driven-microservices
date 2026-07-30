@@ -5,10 +5,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.event.driven.common.service.enums.AggregateType;
-import com.event.driven.common.service.events.StockReservationEvent;
+import com.event.driven.common.service.events.StockReservationConfirmedEvent;
+import com.event.driven.common.service.events.StockReservationCreatedEvent;
 import com.event.driven.common.service.events.StockReservationFailedEvent;
-import com.event.driven.common.service.events.StockUpdatedEvent;
-import com.event.driven.stock.service.dto.request.StockOperationRequest;
+import com.event.driven.common.service.events.StockReservationReleasedEvent;
+import com.event.driven.common.service.events.StockAddedEvent;
+import com.event.driven.stock.service.dto.request.AddStockRequest;
+import com.event.driven.stock.service.dto.request.ReserveStockRequest;
 import com.event.driven.stock.service.dto.response.InventoryResponse;
 import com.event.driven.stock.service.entity.Inventory;
 import com.event.driven.stock.service.entity.Product;
@@ -22,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class InventoryService {
-
+    
     private final InventoryRepository inventoryRepository;
     private final ProductService productService;
     private InventoryTransactionService inventoryTransactionService;
@@ -30,9 +33,9 @@ public class InventoryService {
 
     @Autowired
     public InventoryService(InventoryRepository inventoryRepository,
-            ProductService productService,
-            InventoryTransactionService inventoryTransactionService,
-            OutboxEventService outboxEventService) {
+                        ProductService productService,
+                        InventoryTransactionService inventoryTransactionService,
+                        OutboxEventService outboxEventService) {
         this.inventoryRepository = inventoryRepository;
         this.productService = productService;
         this.inventoryTransactionService = inventoryTransactionService;
@@ -43,187 +46,192 @@ public class InventoryService {
         log.info("Creating inventory for SKU={}", sku);
         Product product = productService.findBySku(sku);
         Inventory inventory = Inventory.builder()
-                .product(product)
-                .totalQuantity(0)
-                .availableQuantity(0)
-                .build();
+                    .product(product)
+                    .totalQuantity(0)
+                    .availableQuantity(0)
+                    .build();
         Inventory savedInventory = saveInventory(inventory);
         log.info("Successfully saved inventory with id={}", savedInventory.getId());
     }
 
     @Transactional
-    public InventoryResponse addStock(StockOperationRequest stockRequest) {
+    public InventoryResponse addStock(AddStockRequest addStockRequest) {
         log.info("Adding stock, sku={}, quantity={}",
-                stockRequest.getSku(), stockRequest.getQuantity());
+                        addStockRequest.getSku(), addStockRequest.getQuantity());
 
-        Product product = productService.findBySku(stockRequest.getSku());
+        Product product = productService.findBySku(addStockRequest.getSku());
         Inventory inventory = findByProduct(product);
 
         inventory.setTotalQuantity(
-                inventory.getTotalQuantity() + stockRequest.getQuantity());
+                    inventory.getTotalQuantity() + addStockRequest.getQuantity());
         inventory.setAvailableQuantity(
-                inventory.getAvailableQuantity() + stockRequest.getQuantity());
+                    inventory.getAvailableQuantity() + addStockRequest.getQuantity());
         Inventory savedInventory = saveInventory(inventory);
 
-        inventoryTransactionService.saveTransaction(savedInventory, 
-                        stockRequest.getQuantity(), TransactionType.STOCK_IN);
+        inventoryTransactionService.saveTransaction(savedInventory,
+                    addStockRequest.getQuantity(), TransactionType.STOCK_IN);
 
+        StockAddedEvent stockAddedEvent = StockAddedEvent.builder()
+                        .productId(product.getId())
+                        .sku(product.getSku())
+                        .quantity(addStockRequest.getQuantity())
+                        .availableQuantity(savedInventory.getAvailableQuantity())
+                        .build();
 
-        StockUpdatedEvent stockUpdatedEvent = StockUpdatedEvent.builder()
-                .productId(product.getId())
-                .sku(product.getSku())
-                .quantity(stockRequest.getQuantity())
-                .availableQuantity(savedInventory.getAvailableQuantity())
-                .build();
-
-        outboxEventService.saveEvent(EventType.STOCK_UPDATED, AggregateType.INVENTORY,
-                savedInventory.getId().toString(), stockUpdatedEvent);
+        outboxEventService.saveEvent(EventType.STOCK_ADDED, 
+                        AggregateType.INVENTORY,
+                        savedInventory.getId().toString(), 
+                        stockAddedEvent);
 
         log.info("Stock added successfully, sku={}, available quantity={}",
-                stockRequest.getSku(), savedInventory.getAvailableQuantity());
+                                addStockRequest.getSku(), savedInventory.getAvailableQuantity());
 
         return toResponse(product, savedInventory);
     }
 
     @Transactional
-    public void restoreStock(StockOperationRequest stockRequest) {
-        Product product = productService.findBySku(stockRequest.getSku());
+    public void restoreStock(AddStockRequest addStockRequest) {
+        Product product = productService.findBySku(addStockRequest.getSku());
         Inventory inventory = findByProduct(product);
 
         inventory.setTotalQuantity(
-                inventory.getTotalQuantity() + stockRequest.getQuantity());
+                    inventory.getTotalQuantity() + addStockRequest.getQuantity());
         inventory.setAvailableQuantity(
-                inventory.getAvailableQuantity() + stockRequest.getQuantity());
+                    inventory.getAvailableQuantity() + addStockRequest.getQuantity());
         Inventory savedInventory = saveInventory(inventory);
 
-        inventoryTransactionService.saveTransaction(savedInventory, 
-                        stockRequest.getQuantity(), TransactionType.STOCK_RETURNED);
+        inventoryTransactionService.saveTransaction(savedInventory,
+                    addStockRequest.getQuantity(), TransactionType.STOCK_RETURNED);
 
         log.info("Stock restored: sku={}, available quantity={}",
-                stockRequest.getSku(), savedInventory.getAvailableQuantity());
+                                addStockRequest.getSku(), 
+                                savedInventory.getAvailableQuantity());
     }
 
     @Transactional
-    public InventoryResponse updateReservation(StockOperationRequest stockRequest) {
-        log.info("Updating reservation, sku={}, quantity={}", 
-                    stockRequest.getSku(), stockRequest.getQuantity());     
+    public InventoryResponse createReservation(ReserveStockRequest reserveStockRequest) {
+        log.info("Reserving stock, sku={}, quantity={}",
+                        reserveStockRequest.getSku(), reserveStockRequest.getQuantity());
 
-        Product product = productService.findBySku(stockRequest.getSku());
+        Product product = productService.findBySku(reserveStockRequest.getSku());
 
         Inventory inventory = findByProduct(product);
-        if (inventory.getAvailableQuantity() < stockRequest.getQuantity()) {
+        if (inventory.getAvailableQuantity() < reserveStockRequest.getQuantity()) {
             StockReservationFailedEvent failedEvent = StockReservationFailedEvent.builder()
-                        .productId(product.getId())
-                        .sku(product.getSku())
-                        .requestedQuantity(stockRequest.getQuantity())
-                        .availableQuantity(inventory.getAvailableQuantity())
-                        .build();
-            outboxEventService.saveEvent(EventType.STOCK_RESERVATION_FAILED, 
-                                        AggregateType.INVENTORY,
-                                        inventory.getId().toString(),
-                                        failedEvent);   
-                                 
-            log.warn("Order failed: insufficient sku={}", stockRequest.getSku());
+                            .productId(product.getId())
+                            .orderId(reserveStockRequest.getOrderId())
+                            .sku(product.getSku())
+                            .requestedQuantity(reserveStockRequest.getQuantity())
+                            .availableQuantity(inventory.getAvailableQuantity())
+                            .build();
+            outboxEventService.saveEvent(EventType.STOCK_RESERVATION_FAILED,
+                            AggregateType.INVENTORY,
+                            inventory.getId().toString(),
+                            failedEvent);
+
+            log.warn("Order failed: insufficient sku={}", reserveStockRequest.getSku());
             return toResponse(product, inventory);
         }
         inventory.setAvailableQuantity(
-                inventory.getAvailableQuantity() - stockRequest.getQuantity());
+                        inventory.getAvailableQuantity() - reserveStockRequest.getQuantity());
         Inventory savedInventory = saveInventory(inventory);
 
-        inventoryTransactionService.saveTransaction(savedInventory, 
-                        stockRequest.getQuantity(), TransactionType.STOCK_RESERVED);
-        
-        StockReservationEvent reservationEvent = StockReservationEvent.builder()
+        inventoryTransactionService.saveTransaction(savedInventory,
+                        reserveStockRequest.getQuantity(), TransactionType.STOCK_RESERVED);
+
+        StockReservationCreatedEvent reservationEvent = StockReservationCreatedEvent.builder()
                         .productId(product.getId())
+                        .orderId(reserveStockRequest.getOrderId())
                         .sku(product.getSku())
-                        .quantity(stockRequest.getQuantity())
+                        .quantity(reserveStockRequest.getQuantity())
                         .availableQuantity(savedInventory.getAvailableQuantity())
                         .build();
-        
-        outboxEventService.saveEvent(EventType.STOCK_RESERVATION_UPDATED, 
-                            AggregateType.INVENTORY, 
-                            savedInventory.getId().toString(), reservationEvent);
 
-        log.info("Reservation updated successfully, sku={}, available={}, quantity={}", 
-                stockRequest.getSku(), savedInventory.getAvailableQuantity(), 
-                                stockRequest.getQuantity());
+        outboxEventService.saveEvent(EventType.STOCK_RESERVATION_CREATED,
+                        AggregateType.INVENTORY,
+                        savedInventory.getId().toString(), 
+                        reservationEvent);
+
+        log.info("Reservation updated successfully, sku={}, available={}, quantity={}",
+                        reserveStockRequest.getSku(), savedInventory.getAvailableQuantity(),
+                        reserveStockRequest.getQuantity());
 
         return toResponse(product, savedInventory);
     }
 
     @Transactional
-    public InventoryResponse confirmReservation(StockOperationRequest stockRequest) {
+    public InventoryResponse confirmReservation(ReserveStockRequest reserveStockRequest) {
         log.info("Confirming reservation for sku={}, quantity={}",
-                stockRequest.getSku(), stockRequest.getQuantity());
+                                reserveStockRequest.getSku(), reserveStockRequest.getQuantity());
 
-        Product product = productService.findBySku(stockRequest.getSku());
+        Product product = productService.findBySku(reserveStockRequest.getSku());
         Inventory inventory = findByProduct(product);
 
         inventory.setTotalQuantity(
-                inventory.getTotalQuantity() - stockRequest.getQuantity());
+                        inventory.getTotalQuantity() - reserveStockRequest.getQuantity());
         Inventory savedInventory = saveInventory(inventory);
 
-        inventoryTransactionService.saveTransaction(savedInventory, 
-                stockRequest.getQuantity(), TransactionType.STOCK_OUT);
+        inventoryTransactionService.saveTransaction(savedInventory,
+                        reserveStockRequest.getQuantity(), TransactionType.STOCK_OUT);
 
-        StockUpdatedEvent addedEvent = StockUpdatedEvent.builder()
-                .productId(product.getId())
-                .sku(product.getSku())
-                .quantity(stockRequest.getQuantity())
-                .availableQuantity(savedInventory.getAvailableQuantity())
-                .build();
+        StockReservationConfirmedEvent stockReservationConfirmedEvent = StockReservationConfirmedEvent.builder()
+                        .productId(product.getId())
+                        .sku(product.getSku())
+                        .quantity(reserveStockRequest.getQuantity())
+                        .availableQuantity(savedInventory.getAvailableQuantity())
+                        .build();
 
-        outboxEventService.saveEvent(EventType.STOCK_RESERVATION_CONFIRMED, 
-                                AggregateType.INVENTORY,
-                                savedInventory.getId().toString(), 
-                                addedEvent);
+        outboxEventService.saveEvent(EventType.STOCK_RESERVATION_CONFIRMED,
+                        AggregateType.INVENTORY,
+                        savedInventory.getId().toString(),
+                        stockReservationConfirmedEvent);
 
         log.info("Reservation confirmed successfully, sku={}, available quantity={}",
-                stockRequest.getSku(), savedInventory.getAvailableQuantity());
+                                reserveStockRequest.getSku(), savedInventory.getAvailableQuantity());
 
         return toResponse(product, savedInventory);
     }
 
     @Transactional
-    public InventoryResponse releaseReservation(StockOperationRequest stockRequest) {
-        log.info("releasing reservation for sku={}, quantity={}",
-                stockRequest.getSku(), stockRequest.getQuantity());
+    public InventoryResponse releaseReservation(ReserveStockRequest reserveStockRequest) {
+        log.info("Releasing reservation for sku={}, quantity={}",
+                                reserveStockRequest.getSku(), reserveStockRequest.getQuantity());
 
-        Product product = productService.findBySku(stockRequest.getSku());
+        Product product = productService.findBySku(reserveStockRequest.getSku());
         Inventory inventory = findByProduct(product);
 
         inventory.setAvailableQuantity(
-                inventory.getAvailableQuantity() + stockRequest.getQuantity());
+                        inventory.getAvailableQuantity() + reserveStockRequest.getQuantity());
         Inventory savedInventory = saveInventory(inventory);
 
-        inventoryTransactionService.saveTransaction(savedInventory, 
-                        stockRequest.getQuantity(), TransactionType.STOCK_RELEASED);
+        inventoryTransactionService.saveTransaction(savedInventory,
+                        reserveStockRequest.getQuantity(), TransactionType.STOCK_RELEASED);
 
-        StockUpdatedEvent addedEvent = StockUpdatedEvent.builder()
-                .productId(product.getId())
-                .sku(product.getSku())
-                .quantity(stockRequest.getQuantity())
-                .availableQuantity(savedInventory.getAvailableQuantity())
-                .build();
+        StockReservationReleasedEvent stockReservationReleasedEvent = StockReservationReleasedEvent.builder()
+                        .productId(product.getId())
+                        .sku(product.getSku())
+                        .quantity(reserveStockRequest.getQuantity())
+                        .availableQuantity(savedInventory.getAvailableQuantity())
+                        .build();
 
-        outboxEventService.saveEvent(EventType.STOCK_RESERVATION_RELEASED, 
-                                AggregateType.INVENTORY,
-                                savedInventory.getId().toString(), 
-                                addedEvent);
+        outboxEventService.saveEvent(EventType.STOCK_RESERVATION_RELEASED,
+                        AggregateType.INVENTORY,
+                        savedInventory.getId().toString(),
+                        stockReservationReleasedEvent);
 
         log.info("Reservation released, sku={}, available quantity={}",
-                stockRequest.getSku(), savedInventory.getAvailableQuantity());
+                                reserveStockRequest.getSku(), savedInventory.getAvailableQuantity());
 
         return toResponse(product, savedInventory);
     }
 
     public Inventory saveInventory(Inventory inventory) {
-        return inventoryRepository.save(inventory);
+            return inventoryRepository.save(inventory);
     }
 
     public Inventory findByProduct(Product product) {
-        return inventoryRepository.findByProduct(product)
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
+            return inventoryRepository.findByProduct(product)
+                                .orElseThrow(() -> new ResourceNotFoundException("Inventory not found"));
     }
 
     public InventoryResponse getInventory(String sku) {
@@ -234,10 +242,10 @@ public class InventoryService {
 
     private InventoryResponse toResponse(Product product, Inventory inventory) {
         return InventoryResponse.builder()
-                .sku(product.getSku())
-                .productName(product.getName())
-                .totalQuantity(inventory.getTotalQuantity())
-                .availableQuantity(inventory.getAvailableQuantity())
-                .build();
-    }            
+                    .sku(product.getSku())
+                    .productName(product.getName())
+                    .totalQuantity(inventory.getTotalQuantity())
+                    .availableQuantity(inventory.getAvailableQuantity())
+                    .build();
+        }
 }

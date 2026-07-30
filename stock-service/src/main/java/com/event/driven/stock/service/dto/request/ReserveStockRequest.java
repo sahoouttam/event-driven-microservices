@@ -1,4 +1,4 @@
-package com.event.driven.common.service.events;
+package com.event.driven.stock.service.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,13 +9,11 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class StockUpdatedEvent {
-
-    private Long productId;
-
+public class ReserveStockRequest {
+    
     private String sku;
 
     private Integer quantity;
 
-    private Integer availableQuantity;
+    private Long orderId;
 }

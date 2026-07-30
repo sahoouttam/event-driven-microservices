@@ -9,11 +9,9 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class StockReservationEvent {
-    
-    private Long productId;
+public class StockReservationConfirmedEvent {
 
-    private Long orderId;
+    private Long productId;
 
     private String sku;
 

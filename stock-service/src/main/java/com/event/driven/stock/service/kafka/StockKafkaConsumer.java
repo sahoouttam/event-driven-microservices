@@ -13,7 +13,8 @@ import com.event.driven.common.service.events.ReturnCompletedEvent;
 import com.event.driven.common.service.events.ReturnItemEvent;
 import com.event.driven.common.service.exceptions.EventSerializationException;
 import com.event.driven.common.service.kafka.KafkaTopics;
-import com.event.driven.stock.service.dto.request.StockOperationRequest;
+import com.event.driven.stock.service.dto.request.AddStockRequest;
+import com.event.driven.stock.service.dto.request.ReserveStockRequest;
 import com.event.driven.stock.service.dto.response.InventoryResponse;
 import com.event.driven.stock.service.service.InventoryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,70 +25,69 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class StockKafkaConsumer {
-    
+
     private final InventoryService inventoryService;
     private final ObjectMapper objectMapper;
 
     @Autowired
-    public StockKafkaConsumer(InventoryService inventoryService, 
-                                ObjectMapper objectMapper) {
+    public StockKafkaConsumer(InventoryService inventoryService,
+            ObjectMapper objectMapper) {
         this.inventoryService = inventoryService;
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(
-        topics = KafkaTopics.ORDER_EVENTS,
-        groupId = "${spring.kafka.consumer.group-id}"
-    )
+    @KafkaListener(topics = KafkaTopics.ORDER_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeEvent(String envelopeJson) {
         try {
             EventEnvelope eventEnvelope = objectMapper.readValue(
-                                                envelopeJson, EventEnvelope.class);
-            log.info("Received event type: {}, eventId: {}", 
+                    envelopeJson, EventEnvelope.class);
+            log.info("Received event type: {}, eventId: {}",
                     eventEnvelope.getEventType(), eventEnvelope.getEventId());
-            String eventType = eventEnvelope.getEventType();  
+            String eventType = eventEnvelope.getEventType();
             if ("ORDER_CREATED".equals(eventType)) {
                 OrderCreatedEvent orderCreatedEvent = objectMapper.readValue(
-                                eventEnvelope.getPayload(), 
-                                OrderCreatedEvent.class);
+                        eventEnvelope.getPayload(),
+                        OrderCreatedEvent.class);
                 for (OrderItemEvent orderItemEvent : orderCreatedEvent.getOrderItemEvents()) {
-                    StockOperationRequest stockOperationRequest = new StockOperationRequest(
-                            orderItemEvent.getSku(),
-                            orderItemEvent.getQuantity()
-                    );
-                    InventoryResponse inventoryResponse = inventoryService.updateReservation(stockOperationRequest);
+                    ReserveStockRequest reserveStockRequest = ReserveStockRequest.builder()
+                            .sku(orderItemEvent.getSku())
+                            .quantity(orderItemEvent.getQuantity())
+                            .orderId(orderCreatedEvent.getOrderId())
+                            .build();
+                    InventoryResponse inventoryResponse = inventoryService.createReservation(reserveStockRequest);
                     log.info("Stock reserved for order item {}, with sku {} and quantity {}",
-                                        inventoryResponse.getProductName(),
-                                        inventoryResponse.getSku(),
-                                        inventoryResponse.getAvailableQuantity());
+                            inventoryResponse.getProductName(),
+                            inventoryResponse.getSku(),
+                            inventoryResponse.getAvailableQuantity());
                 }
             } else if ("ORDER_CONFIRMED".equals(eventType)) {
                 OrderConfirmedEvent orderConfirmedEvent = objectMapper.readValue(
-                    eventEnvelope.getPayload(), OrderConfirmedEvent.class);
+                        eventEnvelope.getPayload(), OrderConfirmedEvent.class);
                 for (OrderItemEvent orderItemEvent : orderConfirmedEvent.getOrderItemEvents()) {
-                    StockOperationRequest stockOperationRequest = new StockOperationRequest(
-                            orderItemEvent.getSku(),
-                            orderItemEvent.getQuantity()
-                    );
-                    InventoryResponse inventoryResponse = inventoryService.confirmReservation(stockOperationRequest);
+                    ReserveStockRequest reserveStockRequest = ReserveStockRequest.builder()
+                            .sku(orderItemEvent.getSku())
+                            .quantity(orderItemEvent.getQuantity())
+                            .orderId(orderConfirmedEvent.getOrderId())
+                            .build();
+                    InventoryResponse inventoryResponse = inventoryService.confirmReservation(reserveStockRequest);
                     log.info("Reservation confirmed for order item {}, with sku {} and quantity {}",
-                                        inventoryResponse.getProductName(),
-                                        inventoryResponse.getSku(),
-                                        inventoryResponse.getAvailableQuantity());
+                            inventoryResponse.getProductName(),
+                            inventoryResponse.getSku(),
+                            inventoryResponse.getAvailableQuantity());
                 }
             } else if ("ORDER_CANCELLED".equals(eventType)) {
                 OrderCancelledEvent orderCancelledEvent = objectMapper.readValue(
-                    eventEnvelope.getPayload(), OrderCancelledEvent.class);
+                        eventEnvelope.getPayload(), OrderCancelledEvent.class);
                 for (OrderItemEvent orderItemEvent : orderCancelledEvent.getOrderItemEvents()) {
-                    StockOperationRequest stockOperationRequest = new StockOperationRequest(
+                    ReserveStockRequest reserveStockRequest = new ReserveStockRequest(
                             orderItemEvent.getSku(),
-                            orderItemEvent.getQuantity()
-                    );
-                    InventoryResponse inventoryResponse = inventoryService.releaseReservation(stockOperationRequest);
+                            orderItemEvent.getQuantity(),
+                            orderCancelledEvent.getOrderId());
+                    InventoryResponse inventoryResponse = inventoryService.releaseReservation(reserveStockRequest);
                     log.info("Reservation cancelled for order item {}, with sku {} and quantity {}",
-                                        inventoryResponse.getProductName(),
-                                        inventoryResponse.getSku(),
-                                        inventoryResponse.getAvailableQuantity());
+                            inventoryResponse.getProductName(),
+                            inventoryResponse.getSku(),
+                            inventoryResponse.getAvailableQuantity());
                 }
             }
 
@@ -96,26 +96,23 @@ public class StockKafkaConsumer {
         }
     }
 
-    @KafkaListener(
-        topics = KafkaTopics.FULFILLMENT_EVENTS,
-        groupId = "${spring.kafka.consumer.group-id}"
-    )
+    @KafkaListener(topics = KafkaTopics.FULFILLMENT_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeFulfillmentEvents(String envelopeJson) {
         try {
             EventEnvelope eventEnvelope = objectMapper.readValue(
-                                                envelopeJson, EventEnvelope.class);
-            log.info("Received event type: {}, eventId: {}", 
+                    envelopeJson, EventEnvelope.class);
+            log.info("Received event type: {}, eventId: {}",
                     eventEnvelope.getEventType(), eventEnvelope.getEventId());
             if ("RETURN_COMPLETED".equals(eventEnvelope.getEventType())) {
                 ReturnCompletedEvent returnCompletedEvent = objectMapper
-                        .readValue(eventEnvelope.getPayload(), 
-                                    ReturnCompletedEvent.class);
+                        .readValue(eventEnvelope.getPayload(),
+                                ReturnCompletedEvent.class);
                 for (ReturnItemEvent returnItemEvent : returnCompletedEvent.getReturnItemEvents()) {
-                    StockOperationRequest stockOperationRequest = new StockOperationRequest(
-                        returnItemEvent.getSku(),
-                        returnItemEvent.getQuantity()
-                    );
-                    inventoryService.restoreStock(stockOperationRequest);
+                    AddStockRequest addStockRequest = new AddStockRequest(
+                            returnItemEvent.getSku(),
+                            returnItemEvent.getQuantity(),
+                            returnCompletedEvent.getOrderId());
+                    inventoryService.restoreStock(addStockRequest);
                 }
             }
         } catch (JsonProcessingException ex) {

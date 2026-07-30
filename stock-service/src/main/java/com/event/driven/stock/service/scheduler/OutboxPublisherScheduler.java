@@ -19,7 +19,7 @@ public class OutboxPublisherScheduler {
         this.outboxPublisherService = outboxPublisherService;
     }
 
-    @Scheduled(fixedDelayString = "${application.outbox.publish-delay-ms}")
+    @Scheduled(fixedDelay = 5000)
     public void publishPendingEvents() {
         log.info("Starting outbox publisher scheduler");
         outboxPublisherService.publishPendingEvents();
