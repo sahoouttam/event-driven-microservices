@@ -12,6 +12,7 @@ import com.event.driven.common.service.enums.EventStatus;
 import com.event.driven.common.service.exceptions.EventSerializationException;
 import com.event.driven.stock.service.entity.OutboxEvent;
 import com.event.driven.stock.service.enums.EventType;
+import com.event.driven.stock.service.exception.ResourceNotFoundException;
 import com.event.driven.stock.service.repository.OutboxEventRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,5 +67,13 @@ public class OutboxEventService {
         outboxEvent.setRetryCount(outboxEvent.getRetryCount() + 1);
         outboxEventRepository.save(outboxEvent);
     }
+
+    public OutboxEvent findById(Long id) {
+        return outboxEventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("outbox event not found"));
+    }
     
+    public List<OutboxEvent> findAllOutboxEvent() {
+        return outboxEventRepository.findAll();
+    }
 }
