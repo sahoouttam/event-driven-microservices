@@ -1,5 +1,7 @@
 package com.event.driven.order.service.mapper;
 
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
 
 import com.event.driven.common.service.events.OrderItemEvent;
@@ -15,9 +17,14 @@ public class OrderMapper {
         return OrderResponse.builder()
                     .id(order.getId())
                     .orderNumber(order.getOrderNumber())
+                    .customerId(order.getCustomerId())
                     .orderStatus(order.getOrderStatus())
                     .totalAmount(order.getTotalAmount())
                     .createdAt(order.getCreatedAt())
+                    .orderItems(order.getOrderItems()
+                            .stream()
+                            .map(this::toResponse)
+                            .collect(Collectors.toList()))  
                     .build();
     }
 

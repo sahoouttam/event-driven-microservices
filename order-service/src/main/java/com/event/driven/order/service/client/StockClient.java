@@ -30,8 +30,10 @@ public class StockClient {
     
     public ProductResponse getProductBySku(String sku) {
         try {
+            String fullUrl = stockConfig.getStockServiceUrl() + 
+                            stockConfig.getGetProductUrl();
             ResponseEntity<ProductResponse> response = restTemplate.exchange(
-                stockConfig.getStockServiceUrl() + stockConfig.getStockServiceUrl(), 
+                fullUrl, 
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 new ParameterizedTypeReference<ProductResponse>() {}

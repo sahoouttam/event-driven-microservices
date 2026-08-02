@@ -49,6 +49,7 @@ public class OrderService {
         this.outboxEventService = outboxEventService;
     }
 
+    @Transactional
     public OrderResponse createOrder(CreateOrderRequest createOrderRequest) {
         Order order = Order.builder()
                 .orderNumber(generateOrderNumber())
@@ -60,16 +61,19 @@ public class OrderService {
                 .build();
         Order savedOrder = orderRepository.save(order);
 
+        List<OrderItem> orderItems = new ArrayList<>();
         List<OrderItemEvent> orderItemEvents = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (OrderItemRequest orderItemRequest : createOrderRequest.getOrderItemRequests()) {
             OrderItem orderItem = orderItemService
                         .createOrderItem(orderItemRequest, savedOrder);
+            orderItems.add(orderItem);
             totalAmount = totalAmount.add(orderItem.getSubTotal());
             OrderItemEvent orderItemEvent = orderMapper.toEvent(orderItem);
             orderItemEvents.add(orderItemEvent);
         }
         savedOrder.setTotalAmount(totalAmount);
+        savedOrder.setOrderItems(orderItems);
         Order updatedOrder = orderRepository.save(savedOrder);
         OrderCreatedEvent orderCreatedEvent = OrderCreatedEvent.builder()
                 .orderId(updatedOrder.getId())
@@ -83,11 +87,6 @@ public class OrderService {
                                     savedOrder.getId().toString(), 
                                     orderCreatedEvent);  
         return orderMapper.toResponse(updatedOrder);
-    }
-
-    public void deleteOrder(Long orderId) {
-        log.info("deleting order with id {}", orderId);
-        orderRepository.deleteById(orderId);
     }
     
     @Transactional
@@ -149,6 +148,7 @@ public class OrderService {
         }
     }
 
+    @Transactional
     public OrderResponse getOrder(Long orderId) {
         Order order = findOrder(orderId);
         return orderMapper.toResponse(order);
@@ -160,6 +160,7 @@ public class OrderService {
                     new ResourceNotFoundException("order not found"));
     }
 
+    @Transactional
     public List<OrderResponse> getAllOrders(Long customerId) {
         log.info("Getting all orders for customer with id {}", customerId);
         return orderRepository.findByCustomerId(customerId)
@@ -167,6 +168,11 @@ public class OrderService {
                     .map(order -> orderMapper.toResponse(order))
                     .collect(Collectors.toList());
 
+    }
+
+    public void deleteOrder(Long orderId) {
+        log.info("deleting order with id {}", orderId);
+        orderRepository.deleteById(orderId);
     }
 
     private String generateOrderNumber() {

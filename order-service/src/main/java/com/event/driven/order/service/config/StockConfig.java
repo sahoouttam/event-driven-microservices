@@ -9,7 +9,6 @@ import lombok.Data;
 @Configuration
 public class StockConfig {
     
-
     @Value("${stock.service.base.url}")
     private String stockServiceUrl;
 

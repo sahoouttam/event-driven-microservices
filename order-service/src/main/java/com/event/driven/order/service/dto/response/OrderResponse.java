@@ -21,6 +21,8 @@ public class OrderResponse {
 
     private String orderNumber;
 
+    private Long customerId;
+
     private OrderStatus orderStatus;
 
     private BigDecimal totalAmount;

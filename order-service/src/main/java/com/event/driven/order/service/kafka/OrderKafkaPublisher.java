@@ -6,6 +6,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.event.driven.common.service.events.EventEnvelope;
+import com.event.driven.common.service.kafka.KafkaTopics;
 import com.event.driven.order.service.entity.OutboxEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -22,7 +23,7 @@ public class OrderKafkaPublisher {
 
     public void publish(OutboxEvent outboxEvent) {
         try {
-            String topic = KafkaTopicProperties.ORDER_EVENTS;
+            String topic = KafkaTopics.ORDER_EVENTS;
             EventEnvelope eventEnvelope = buildEventEnvelope(outboxEvent);
             kafkaTemplate.send(topic, 
                         outboxEvent.getAggregateId(), 
