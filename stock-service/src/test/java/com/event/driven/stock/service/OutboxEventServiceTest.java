@@ -50,7 +50,7 @@ public class OutboxEventServiceTest {
                                 "2", 
                                 stockReservationCreatedEvent);
 
-        List<OutboxEvent> outboxEvents = outboxEventRepository.findAll();
+        List<OutboxEvent> outboxEvents = outboxEventService.findAllOutboxEvent();
         assertEquals(1, outboxEvents.size());
 
         OutboxEvent outboxEvent = outboxEvents.get(0);
