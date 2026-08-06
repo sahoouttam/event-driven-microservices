@@ -112,3 +112,57 @@ sequenceDiagram
     O->>K: ORDER_CANCELLED
     K->>S: Consume ORDER_CANCELLED
     S->>S: Release Reservation
+```
+
+### Return Flow
+
+```mermaid
+    sequenceDiagram
+    participant C as Customer
+    participant F as Fulfillment Service
+    participant K as Kafka
+    participant O as Order Service
+    participant S as Stock Service
+
+    C->>F: POST /returns
+    F->>F: Create Return
+    F->>K: RETURN_COMPLETED
+    K->>O: Consume RETURN_COMPLETED
+    O->>O: Update Status (RETURNED)
+    K->>S: Consume RETURN_COMPLETED
+    S->>S: Restock Items
+```
+
+### Order Status Lifecycle
+
+```mermaid
+    stateDiagram-v2
+    [*] --> PENDING_INVENTORY
+    PENDING_INVENTORY --> PENDING_PAYMENT: Stock Reserved
+    PENDING_INVENTORY --> FAILED: Stock Failed
+    PENDING_PAYMENT --> CONFIRMED: Payment Success
+    PENDING_PAYMENT --> CANCELLED: Payment Failed
+    CONFIRMED --> SHIPPED: Order Shipped
+    SHIPPED --> DELIVERED: Order Delivered
+    DELIVERED --> RETURNED: Return Completed
+    CANCELLED --> [*]
+    FAILED --> [*]
+```
+
+### SAGA Compensation
+
+```mermaid
+    flowchart TD
+    A[Order Created] --> B{Stock Check}
+    B -->|Available| C[Reserve Stock]
+    B -->|Unavailable| D[Order Failed]
+    D --> E[Compensate: Nothing to undo]
+    C --> F{Payment}
+    F -->|Success| G[Order Confirmed]
+    F -->|Failed| H[Order Cancelled]
+    H --> I[Compensate: Release Stock]
+    G --> J[Deduct Stock]
+    G --> K[Create Fulfillment]
+    G --> L{Refund?}
+    L -->|Yes| M[Refund Payment]
+    M --> N[Compensate: Restock Items]
