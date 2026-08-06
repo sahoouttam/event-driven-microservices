@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Java](https://img.shields.io/badge/Java-21-orange)
+![Java](https://img.shields.io/badge/Java-26-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-green)
 ![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-3.7-red)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
@@ -27,7 +27,7 @@
 
 | Category | Technology |
 |----------|------------|
-| **Language** | Java 21 |
+| **Language** | Java 26 |
 | **Framework** | Spring Boot 3.5 |
 | **Messaging** | Apache Kafka 3.7 |
 | **Stream Processing** | Kafka Streams, Avro |
@@ -50,7 +50,7 @@
 
 ## 🔄 Order Flow
 
-### Happy Path
+### From Order Creation to Fulfillment
 
 ```mermaid
 sequenceDiagram
@@ -83,3 +83,31 @@ sequenceDiagram
     F->>K: FULFILLMENT_SHIPPED
     K->>O: Consume FULFILLMENT_SHIPPED
     O->>O: Update Status (SHIPPED)
+
+### Compensation Flow (Failures)
+
+```mermaid
+sequenceDiagram
+    participant O as Order Service
+    participant K as Kafka
+    participant S as Stock Service
+    participant P as Payment Service
+
+    Note over O,P: Scenario 1 - Stock Reservation Failed
+    O->>K: ORDER_CREATED
+    K->>S: Consume ORDER_CREATED
+    S->>S: Insufficient Stock
+    S->>K: STOCK_RESERVATION_FAILED
+    K->>O: Consume STOCK_RESERVATION_FAILED
+    O->>O: Update Status (FAILED)
+
+    Note over O,P: Scenario 2 - Payment Failed
+    O->>K: ORDER_PAYMENT_INITIATED
+    K->>P: Consume ORDER_PAYMENT_INITIATED
+    P->>P: Payment Declined
+    P->>K: PAYMENT_FAILED
+    K->>O: Consume PAYMENT_FAILED
+    O->>O: Update Status (CANCELLED)
+    O->>K: ORDER_CANCELLED
+    K->>S: Consume ORDER_CANCELLED
+    S->>S: Release Reservation
