@@ -28,7 +28,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@Table(name = "payment_transactions")
+@Table(name = "refunds")
 public class Refund extends BaseEntity {
     
     @Id

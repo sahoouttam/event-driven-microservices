@@ -130,6 +130,18 @@ public class PaymentService {
         return paymentRefundResponse;
     }
 
+    public PaymentResponse getPaymentByOrder(Long orderId) {
+        return paymentRepository.findByOrderId(orderId)
+                        .map(this::toResponse)
+                        .orElseThrow(() -> new PaymentNotFoundException(
+                                "Payment not found"));
+    }
+
+    public PaymentResponse getPayment(Long id) {
+        Payment payment = findPayment(id);
+        return toResponse(payment);
+    }
+
     private Payment findPayment(Long id) {
         return paymentRepository.findById(id)
             .orElseThrow(() -> new PaymentNotFoundException(
@@ -160,4 +172,5 @@ public class PaymentService {
     private boolean paymentSuccess() {
         return Math.random() < 0.9;
     }
+
 }
