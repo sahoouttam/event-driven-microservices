@@ -83,6 +83,7 @@ sequenceDiagram
     F->>K: FULFILLMENT_SHIPPED
     K->>O: Consume FULFILLMENT_SHIPPED
     O->>O: Update Status (SHIPPED)
+```
 
 ### Compensation Flow (Failures)
 
