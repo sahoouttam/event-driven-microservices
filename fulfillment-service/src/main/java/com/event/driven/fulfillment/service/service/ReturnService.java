@@ -1,6 +1,7 @@
 package com.event.driven.fulfillment.service.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,6 +17,7 @@ import com.event.driven.fulfillment.service.dto.request.ReturnItemRequest;
 import com.event.driven.fulfillment.service.dto.response.FulfillmentResponse;
 import com.event.driven.fulfillment.service.dto.response.ReturnResponse;
 import com.event.driven.fulfillment.service.entity.Return;
+import com.event.driven.fulfillment.service.entity.ReturnItem;
 import com.event.driven.fulfillment.service.enums.EventType;
 import com.event.driven.fulfillment.service.enums.FulfillmentStatus;
 import com.event.driven.fulfillment.service.enums.ReturnStatus;
@@ -64,22 +66,25 @@ public class ReturnService {
                     .build();
         Return savedReturn = saveReturn(returnEntity);
 
+        List<ReturnItem> returnItems = new ArrayList<>();
         for (ReturnItemRequest returnItemRequest : createReturnRequest.getReturnItemRequests()) {
-            returnItemService.createReturnItem(savedReturn, returnItemRequest);
+            ReturnItem returnItem = returnItemService.createReturnItem(savedReturn, returnItemRequest);
+            returnItems.add(returnItem);
         }
-
+        savedReturn.setReturnItems(returnItems);
+        Return updatedReturn = returnRepository.save(savedReturn);
         ReturnInitiatedEvent returnInitiatedEvent = ReturnInitiatedEvent.builder()
-                    .returnId(savedReturn.getId())
-                    .orderId(savedReturn.getOrderId())
-                    .fulfillmentId(savedReturn.getFulfillmentId())
+                    .returnId(updatedReturn.getId())
+                    .orderId(updatedReturn.getOrderId())
+                    .fulfillmentId(updatedReturn.getFulfillmentId())
                     .build();
         outboxEventService.saveEvent(EventType.RETURN_INITIATED, 
                                     AggregateType.RETURN, 
-                                    savedReturn.getId().toString(), 
+                                    updatedReturn.getId().toString(), 
                                     returnInitiatedEvent);
 
         log.info("Return initiated for order {}", createReturnRequest.getOrderId());
-        return fulfillmentMapper.toResponse(savedReturn);
+        return fulfillmentMapper.toResponse(updatedReturn);
     }
 
     public ReturnResponse approveReturn(Long id) {
@@ -131,7 +136,7 @@ public class ReturnService {
         returnEntity.setCompletedAt(LocalDateTime.now());
         Return savedReturn = saveReturn(returnEntity);
 
-        List<ReturnItemEvent>  returnItemEvents = returnItemService.findReturnItems(returnEntity)
+        List<ReturnItemEvent> returnItemEvents = returnItemService.findReturnItems(returnEntity)
                                     .stream()
                                     .map(fulfillmentMapper::toEvent)
                                     .collect(Collectors.toList());
@@ -151,6 +156,10 @@ public class ReturnService {
 
         log.info("Return {} completed", id);
         return fulfillmentMapper.toResponse(savedReturn);
+    }
+
+    public ReturnResponse getReturn(Long returnId) {
+        return fulfillmentMapper.toResponse(findReturn(returnId));
     }
 
     public Return findReturn(Long id) {

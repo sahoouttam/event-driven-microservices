@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.event.driven.common.service.events.ReturnItemEvent;
 import com.event.driven.fulfillment.service.dto.request.ReturnItemRequest;
 import com.event.driven.fulfillment.service.entity.Return;
 import com.event.driven.fulfillment.service.entity.ReturnItem;
@@ -23,7 +22,7 @@ public class ReturnItemService {
         this.returnItemRepository = returnItemRepository;
     }
 
-    public void createReturnItem(Return returnEntity, ReturnItemRequest returnItemRequest) {
+    public ReturnItem createReturnItem(Return returnEntity, ReturnItemRequest returnItemRequest) {
         ReturnItem returnItem = ReturnItem.builder()
                     .returnEntity(returnEntity)
                     .productId(returnItemRequest.getProductId())
@@ -35,9 +34,10 @@ public class ReturnItemService {
                 savedReturnItem.getId(),
                 returnItemRequest.getProductId(),
                 returnItemRequest.getProductName());
+        return savedReturnItem;
     }
 
     public List<ReturnItem> findReturnItems(Return returnEntity) {
-        return returnItemRepository.findByReturn(returnEntity);
+        return returnItemRepository.findByReturnEntity(returnEntity);
     } 
 }

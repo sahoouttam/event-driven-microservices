@@ -1,10 +1,14 @@
 package com.event.driven.fulfillment.service.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.event.driven.common.service.enums.AggregateType;
 import com.event.driven.common.service.events.FulfillmentDeliveredEvent;
@@ -16,6 +20,7 @@ import com.event.driven.fulfillment.service.dto.response.AddressResponse;
 import com.event.driven.fulfillment.service.dto.response.CustomerResponse;
 import com.event.driven.fulfillment.service.dto.response.FulfillmentResponse;
 import com.event.driven.fulfillment.service.entity.Fulfillment;
+import com.event.driven.fulfillment.service.entity.FulfillmentItem;
 import com.event.driven.fulfillment.service.enums.EventType;
 import com.event.driven.fulfillment.service.enums.FulfillmentStatus;
 import com.event.driven.fulfillment.service.exception.FulfillmentException;
@@ -47,6 +52,7 @@ public class FulfillmentService {
         this.accountClient = accountClient;
     }
 
+    @Transactional
     public void createFulfillment(OrderConfirmedEvent orderConfirmedEvent) {
         CompletableFuture<CustomerResponse> customerFuture = 
                 accountClient.getCustomer(orderConfirmedEvent.getCustomerId());
@@ -68,17 +74,22 @@ public class FulfillmentService {
                     .fulfillmentStatus(FulfillmentStatus.PENDING)
                     .build();
         Fulfillment savedFulfillment = fulfillmentRepository.save(fulfillment);
-        
+        List<FulfillmentItem> fulfillmentItems = new ArrayList<>();
         for (OrderItemEvent orderItemEvent : orderConfirmedEvent.getOrderItemEvents()) {
-            fulfillmentItemService.createFulfillmentItem(fulfillment, orderItemEvent);
+            FulfillmentItem fulfillmentItem = fulfillmentItemService
+                                .createFulfillmentItem(savedFulfillment, orderItemEvent);
+            fulfillmentItems.add(fulfillmentItem);
         }
+        savedFulfillment.setFulfillmentItems(fulfillmentItems);
 
+        Fulfillment updatedFulfillment = fulfillmentRepository.save(savedFulfillment);
         log.info("Created fulfillment {} for order {} with {} items", 
-                savedFulfillment.getId(),
-                savedFulfillment.getOrderId(),
-                savedFulfillment.getFulfillmentItems().size());  
+                updatedFulfillment.getId(),
+                updatedFulfillment.getOrderId(),
+                updatedFulfillment.getFulfillmentItems().size());  
     }
 
+    @Transactional
     public FulfillmentResponse startPicking(Long id) {
         Fulfillment fulfillment = findFulfillment(id);
         if (fulfillment.getFulfillmentStatus() != FulfillmentStatus.PENDING) {
@@ -89,6 +100,7 @@ public class FulfillmentService {
         return fulfillmentMapper.toResponse(savedFulfillment);
     }
 
+    @Transactional
     public FulfillmentResponse markPacked(Long id) {
         Fulfillment fulfillment = findFulfillment(id);
         if (fulfillment.getFulfillmentStatus() != FulfillmentStatus.PICKING) {
@@ -99,12 +111,15 @@ public class FulfillmentService {
         return fulfillmentMapper.toResponse(savedFulfillment);
     }
 
-    public FulfillmentResponse shipOrder(Long id, String carrier, String trackingNumber) {
+    @Transactional
+    public FulfillmentResponse shipOrder(Long id) {
         Fulfillment fulfillment = findFulfillment(id);
-        if (fulfillment.getFulfillmentStatus() != FulfillmentStatus.PENDING) {
-            throw new FulfillmentException("Fulfillment not in PENDING state");
+        if (fulfillment.getFulfillmentStatus() != FulfillmentStatus.PACKED) {
+            throw new FulfillmentException("Fulfillment not in PACKED state");
         }
-        fulfillment.setFulfillmentStatus(FulfillmentStatus.PICKING);
+        String trackingNumber = generateTrackingNumber();
+        String carrier = createCarrier();
+        fulfillment.setFulfillmentStatus(FulfillmentStatus.SHIPPED);
         fulfillment.setTrackingNumber(trackingNumber);
         fulfillment.setCarrier(carrier);
         Fulfillment savedFulfillment = saveFulfillment(fulfillment);
@@ -123,12 +138,13 @@ public class FulfillmentService {
         return fulfillmentMapper.toResponse(savedFulfillment);
     }
 
+    @Transactional
     public FulfillmentResponse markDelivered(Long id) {
         Fulfillment fulfillment = findFulfillment(id);
         if (fulfillment.getFulfillmentStatus() != FulfillmentStatus.SHIPPED) {
             throw new FulfillmentException("Fulfillment not in SHIPPED state");
         }
-        fulfillment.setFulfillmentStatus(FulfillmentStatus.SHIPPED);
+        fulfillment.setFulfillmentStatus(FulfillmentStatus.DELIVERED);
         fulfillment.setDeliveredAt(LocalDateTime.now());
         Fulfillment savedFulfillment = saveFulfillment(fulfillment);
         FulfillmentDeliveredEvent fulfillmentDeliveredEvent = FulfillmentDeliveredEvent.builder()
@@ -144,6 +160,7 @@ public class FulfillmentService {
         return fulfillmentMapper.toResponse(savedFulfillment);
     }
 
+    @Transactional
     public void cancelFulfillment(Long id) {
         Fulfillment fulfillment = findFulfillment(id);
         if (fulfillment.getFulfillmentStatus() == FulfillmentStatus.DELIVERED) {
@@ -154,10 +171,17 @@ public class FulfillmentService {
         log.info("Fulfillment cancelled: {}, order: {}", id, savedFulfillment.getOrderId());
     }
 
+    @Transactional
     public FulfillmentResponse getFulfillmentByOrder(Long orderId) {
         return fulfillmentRepository.findByOrderId(orderId)
                     .map(fulfillmentMapper::toResponse)
                     .orElseThrow(() -> new FulfillmentException("Fulfillment not found"));
+    }
+
+    @Transactional
+    public FulfillmentResponse getFulfillment(Long fulfillmentId) {
+        Fulfillment fulfillment = findFulfillment(fulfillmentId);
+        return fulfillmentMapper.toResponse(fulfillment);
     }
 
     private Fulfillment findFulfillment(Long id) {
@@ -168,5 +192,12 @@ public class FulfillmentService {
     public Fulfillment saveFulfillment(Fulfillment fulfillment) {
         return fulfillmentRepository.save(fulfillment);
     }
+
+    private String createCarrier() {
+        return "CARRIER-" + UUID.randomUUID().toString().substring(0, 5); 
+    }
     
+    public String generateTrackingNumber() {
+        return "TRACKING-" + UUID.randomUUID().toString().substring(0, 4);
+    }
 }

@@ -11,5 +11,5 @@ import com.event.driven.fulfillment.service.entity.ReturnItem;
 @Repository
 public interface ReturnItemRepository extends JpaRepository<ReturnItem, Long> {
     
-    List<ReturnItem> findByReturn(Return returnEntity);
+    List<ReturnItem> findByReturnEntity(Return returnEntity);
 }

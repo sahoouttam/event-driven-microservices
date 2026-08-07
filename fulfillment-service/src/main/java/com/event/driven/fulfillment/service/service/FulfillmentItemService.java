@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.event.driven.common.service.events.OrderItemEvent;
-import com.event.driven.fulfillment.service.dto.response.FulfillmentItemResponse;
 import com.event.driven.fulfillment.service.entity.Fulfillment;
 import com.event.driven.fulfillment.service.entity.FulfillmentItem;
 import com.event.driven.fulfillment.service.repository.FulfillmentItemRepository;
@@ -22,7 +21,7 @@ public class FulfillmentItemService {
         this.fulfillmentItemRepository = fulfillmentItemRepository;
     }
 
-    public void createFulfillmentItem(Fulfillment fulfillment, 
+    public FulfillmentItem createFulfillmentItem(Fulfillment fulfillment, 
                                                             OrderItemEvent orderItemEvent) {
         FulfillmentItem fulfillmentItem = FulfillmentItem.builder()
                         .fulfillment(fulfillment)
@@ -36,14 +35,15 @@ public class FulfillmentItemService {
                 savedFulfillmentItem.getId(),
                 savedFulfillmentItem.getProductName(),
                 savedFulfillmentItem.getQuantity());
+        return savedFulfillmentItem;
     }
 
-    private FulfillmentItemResponse mapToResponse(FulfillmentItem fulfillmentItem) {
+    /*private FulfillmentItemResponse mapToResponse(FulfillmentItem fulfillmentItem) {
         return FulfillmentItemResponse.builder()
                     .id(fulfillmentItem.getId())
                     .productId(fulfillmentItem.getProductId())
                     .productName(fulfillmentItem.getProductName())
                     .quantity(fulfillmentItem.getQuantity())
                     .build();
-    }
+    }*/
 }

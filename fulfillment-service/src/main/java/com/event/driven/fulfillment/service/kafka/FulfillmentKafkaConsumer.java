@@ -48,6 +48,7 @@ public class FulfillmentKafkaConsumer {
                 case "ORDER_CANCELLED" -> {
                     OrderCancelledEvent orderCancelledEvent = objectMapper.readValue(
                             eventEnvelope.getPayload(), OrderCancelledEvent.class);
+                    fulfillmentService.cancelFulfillment(orderCancelledEvent.getOrderId());
                 }      
             }
 
