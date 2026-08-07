@@ -166,3 +166,32 @@ sequenceDiagram
     G --> L{Refund?}
     L -->|Yes| M[Refund Payment]
     M --> N[Compensate: Restock Items]
+```
+
+## 🔄 Order Enrichment Streams
+
+Real-time aggregation pipeline that builds order view using Kafka Streams State Store.
+
+### State Store Evolution
+
+```mermaid
+timeline
+    title How an Order Gets Enriched
+    T0 : ORDER_CREATED : Store order, items, customer details (REST)
+    T1 : STOCK_RESERVED : stockReserved = true
+    T2 : PAYMENT_COMPLETED : paymentStatus, transactionId
+    T3 : FULFILLMENT_SHIPPED : trackingNumber, carrier
+    T4 : FULFILLMENT_DELIVERED : delivered status
+```
+### Multi-Source Aggregation
+
+```mermaid
+graph LR
+    OS[Order Service] -->|ORDER_CREATED| ST[(State Store)]
+    SS[Stock Service] -->|STOCK_RESERVED| ST
+    PS[Payment Service] -->|PAYMENT_COMPLETED| ST
+    FS[Fulfillment Service] -->|SHIPPED/DELIVERED| ST
+    AS[Account Service] -->|REST: Customer| ST
+    ST -->|Complete Order| OUT[enriched-orders]
+
+
